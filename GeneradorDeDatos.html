@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Datos — Trabajo Científico</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #080B11;
+    --bg-mid: #0F1319;
+    --bg-card: #151A24;
+    --bg-input: #0C0F16;
+    --border: #222A38;
+    --border-focus: #3B82C4;
+    --text-primary: #E2E8F0;
+    --text-secondary: #7A8599;
+    --text-muted: #4A5568;
+    --accent-red: #EF4444;
+    --accent-red-glow: #EF444433;
+    --accent-teal: #14B8A6;
+    --accent-blue: #3B82F6;
+    --accent-gold: #F59E0B;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* CONFIG */
+  #configScreen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+    animation: fadeIn 0.5s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .config-card {
+    width: 100%; max-width: 560px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px 30px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    position: relative; overflow: hidden;
+  }
+  .config-card::before {
+    content: ''; position: absolute;
+    top: -1px; left: -1px; right: -1px; height: 3px;
+    background: linear-gradient(90deg, var(--accent-red), var(--accent-blue), var(--accent-teal));
+    border-radius: 16px 16px 0 0;
+  }
+  .logo { text-align: center; margin-bottom: 8px; }
+  .logo h1 {
+    font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-red), var(--accent-blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .logo .subtitle {
+    font-size: 11px; color: var(--text-muted); margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .brand-box {
+    text-align: center; margin-bottom: 26px; padding: 12px 0;
+    border-top: 1px solid #1A2030; border-bottom: 1px solid #1A2030;
+  }
+  .brand-company {
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    color: var(--accent-teal); letter-spacing: 1px;
+  }
+  .brand-author {
+    font-size: 10px; color: var(--text-muted); margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field label {
+    display: block; font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 5px; font-weight: 600;
+  }
+  .field input, .field select {
+    width: 100%; padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg-input);
+    color: var(--text-primary); font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .field input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(59,130,196,0.15); }
+  .format-btns { display: flex; gap: 8px; }
+  .format-btn {
+    flex: 1; padding: 9px 0; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--bg-input);
+    color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .format-btn.active {
+    border-color: var(--accent-blue);
+    background: rgba(59,130,246,0.1); color: #93C5FD;
+  }
+  .btn-start {
+    width: 100%; margin-top: 26px; padding: 14px 0; border-radius: var(--radius);
+    border: none; background: linear-gradient(135deg, var(--accent-red), #DC2626);
+    color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px;
+    font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px var(--accent-red-glow);
+  }
+  .btn-start:hover { transform: translateY(-1px); box-shadow: 0 8px 30px var(--accent-red-glow); }
+
+  /* DRAW */
+  #drawScreen { display: none; padding: 8px; animation: fadeIn 0.4s ease; height: 100vh; flex-direction: column; }
+  #drawScreen.active { display: flex; }
+  .toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 8px; margin-bottom: 6px; flex-shrink: 0;
+  }
+  .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; }
+  .btn-sm {
+    padding: 6px 13px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: #3A4455; color: var(--text-primary); }
+  .btn-sm.danger { border-color: rgba(239,68,68,0.25); color: var(--accent-red); }
+  .btn-sm.export {
+    background: linear-gradient(135deg, var(--accent-teal), #0D9488);
+    border-color: transparent; color: #fff; font-weight: 700;
+  }
+  .btn-sm.export:disabled {
+    background: var(--bg-card); border-color: var(--border);
+    color: var(--text-muted); cursor: default;
+  }
+  .badge {
+    font-size: 11px; color: var(--text-muted); background: var(--bg-card);
+    padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border);
+  }
+  .title-draw {
+    font-family: 'Outfit', sans-serif; font-size: 14px;
+    font-weight: 700; color: #CBD5E1;
+  }
+
+  .controls-bar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    background: var(--bg-mid); border: 1px solid #1A2030;
+    border-radius: var(--radius); padding: 8px 14px; margin-bottom: 6px; flex-shrink: 0;
+  }
+  .sep { width: 1px; height: 24px; background: var(--border); }
+  .ctrl-label {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 600; margin-right: 4px;
+  }
+  .group-btn {
+    padding: 4px 11px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg-input); font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; cursor: pointer; transition: all 0.15s;
+  }
+  .tool-size-btn {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .tool-size-btn.active-gold { border-color: var(--accent-gold); background: rgba(245,158,11,0.1); color: var(--accent-gold); }
+  .tool-size-btn.active-red { border-color: var(--accent-red); background: rgba(239,68,68,0.1); color: var(--accent-red); }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .mode-btn {
+    padding: 5px 14px; border: none;
+    background: var(--bg-input); color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .mode-btn.active-draw {
+    background: rgba(20,184,166,0.15); color: var(--accent-teal);
+  }
+  .mode-btn.active-erase {
+    background: rgba(239,68,68,0.15); color: var(--accent-red);
+  }
+
+  #newLabelInput {
+    width: 80px; padding: 4px 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg-input);
+    color: var(--text-primary); font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; outline: none;
+  }
+  #newLabelInput:focus { border-color: var(--border-focus); }
+  .add-label-btn {
+    padding: 4px 10px; border-radius: 6px;
+    border: 1px solid rgba(20,184,166,0.3); background: rgba(20,184,166,0.1);
+    color: var(--accent-teal); font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; cursor: pointer;
+  }
+
+  .canvas-wrapper {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    min-height: 0; position: relative;
+  }
+  #drawCanvas {
+    display: block; border-radius: var(--radius);
+    border: 1px solid var(--border); touch-action: none;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.45); max-width: 100%; max-height: 100%;
+  }
+
+  .legend { display: flex; gap: 14px; justify-content: center; margin-top: 6px; flex-wrap: wrap; flex-shrink: 0; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .preview-panel {
+    position: fixed; bottom: 12px; right: 12px; width: 320px;
+    background: var(--bg-mid); border-radius: var(--radius);
+    border: 1px solid #1A2030; padding: 0; max-height: 200px; overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 10; opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  .preview-panel:hover { opacity: 1; }
+  .preview-title {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 1.2px; padding: 8px 10px 4px; font-weight: 600; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .preview-title::after { content: '▾'; font-size: 9px; }
+  .preview-panel.collapsed .preview-body { display: none; }
+  .preview-panel.collapsed .preview-title::after { content: '▸'; }
+  .preview-body { max-height: 150px; overflow: auto; padding: 0 10px 8px; }
+  .preview-panel table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .preview-panel th {
+    text-align: left; padding: 3px 8px; color: #7BC4E8;
+    border-bottom: 1px solid var(--border); font-weight: 600; font-size: 10px;
+  }
+  .preview-panel th:nth-child(2), .preview-panel th:nth-child(3) { text-align: right; }
+  .preview-panel td { padding: 2px 8px; color: var(--text-secondary); font-size: 10px; }
+  .preview-panel td:nth-child(2), .preview-panel td:nth-child(3) { text-align: right; }
+
+  .footer-brand {
+    text-align: center; padding: 4px 0; flex-shrink: 0;
+    border-top: 1px solid #1A2030;
+  }
+  .footer-brand .company {
+    font-family: 'Outfit', sans-serif; font-size: 11px;
+    font-weight: 700; color: var(--accent-teal); letter-spacing: 0.8px;
+  }
+  .footer-brand .author {
+    font-size: 9px; color: var(--text-muted); margin-top: 1px;
+  }
+  .ml-auto { margin-left: auto; }
+
+  @media (max-width: 600px) {
+    .config-card { padding: 24px 18px; }
+    .form-grid { gap: 10px; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar-right { justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ CONFIG ════════ -->
+<div id="configScreen">
+  <div class="config-card">
+    <div class="logo">
+      <h1>📊 Generador de Datos</h1>
+      <p class="subtitle">Dibuja datos de dispersión interactivamente</p>
+    </div>
+    <div class="brand-box">
+      <div class="brand-company">🔬 Trabajo Científico</div>
+      <div class="brand-author">Elaborado por Oscar Iván Vargas Pineda · Asistido por IA</div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field"><label>Nombre var. X</label><input id="cfgXName" value="x"></div>
+      <div class="field"><label>Nombre var. Y</label><input id="cfgYName" value="y"></div>
+      <div class="field"><label>Etiqueta eje X</label><input id="cfgXLabel" value="Variable X"></div>
+      <div class="field"><label>Etiqueta eje Y</label><input id="cfgYLabel" value="Variable Y"></div>
+      <div class="field"><label>X mínimo</label><input id="cfgXMin" type="number" value="0"></div>
+      <div class="field"><label>X máximo</label><input id="cfgXMax" type="number" value="100"></div>
+      <div class="field"><label>Y mínimo</label><input id="cfgYMin" type="number" value="0"></div>
+      <div class="field"><label>Y máximo</label><input id="cfgYMax" type="number" value="100"></div>
+      <div class="field"><label>Nombre archivo</label><input id="cfgFileName" value="datos_dibujados"></div>
+      <div class="field">
+        <label>Formato de exportación</label>
+        <div class="format-btns">
+          <button class="format-btn active" onclick="setFormat('csv',this)">.csv</button>
+          <button class="format-btn" onclick="setFormat('xlsx',this)">.xlsx</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-start" onclick="startDrawing()">🎨 Comenzar a Dibujar →</button>
+  </div>
+</div>
+
+<!-- ════════ DRAW ════════ -->
+<div id="drawScreen">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn-sm" onclick="goBack()">← Config</button>
+      <span class="title-draw">📊 Generador de Datos</span>
+      <span class="badge" id="pointCount">0 pts</span>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-sm danger" onclick="clearAll()">🗑 Limpiar todo</button>
+      <button class="btn-sm export" id="exportBtn" disabled onclick="exportData()">📥 Exportar</button>
+    </div>
+  </div>
+
+  <div class="controls-bar">
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active-draw" id="modeDrawBtn" onclick="setMode('draw')">✏️ Dibujar</button>
+      <button class="mode-btn" id="modeEraseBtn" onclick="setMode('erase')">🧹 Borrar</button>
+    </div>
+    <div class="sep"></div>
+
+    <!-- Groups (only visible in draw mode) -->
+    <div id="groupSection" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span class="ctrl-label">Grupo:</span>
+      <div id="groupButtons" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+      <input id="newLabelInput" type="text" placeholder="+ nuevo" onkeydown="if(event.key==='Enter')addLabel()">
+      <button class="add-label-btn" onclick="addLabel()">+</button>
+    </div>
+
+    <!-- Eraser radius (only visible in erase mode) -->
+    <div id="eraserSection" style="display:none;align-items:center;gap:6px;">
+      <span class="ctrl-label">Radio borrador:</span>
+      <div id="eraserButtons"></div>
+    </div>
+
+    <div class="sep"></div>
+    <span class="ctrl-label ml-auto" id="sizeLabel">Pincel:</span>
+    <div id="sizeButtons"></div>
+  </div>
+
+  <div class="canvas-wrapper">
+    <canvas id="drawCanvas"></canvas>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="preview-panel" id="previewPanel" style="display:none;">
+    <div class="preview-title" id="previewTitle" onclick="togglePreview()">Vista previa</div>
+    <div class="preview-body">
+      <table><thead id="previewHead"></thead><tbody id="previewBody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="footer-brand">
+    <div class="company">🔬 Trabajo Científico</div>
+    <div class="author">Elaborado por Oscar Iván Vargas Pineda · Asistido por IA</div>
+  </div>
+</div>
+
+<script>
+const COLORS = ["#EF4444","#3B82F6","#14B8A6","#F59E0B","#F97316","#8B5CF6","#06B6D4","#EC4899"];
+let config = {};
+let points = [];
+let labels = ["Grupo A"];
+let currentLabel = "Grupo A";
+let currentColorIdx = 0;
+let brushSize = 1;
+let eraserRadius = 20;
+let isDrawing = false;
+let fileType = "csv";
+let mode = "draw"; // "draw" | "erase"
+
+const PADDING = { top: 30, right: 30, bottom: 55, left: 65 };
+let canvasW = 700, canvasH = 500;
+
+// ─── CONFIG ───
+function setFormat(fmt, el) {
+  fileType = fmt;
+  document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function startDrawing() {
+  config = {
+    xName:  document.getElementById('cfgXName').value  || 'x',
+    yName:  document.getElementById('cfgYName').value  || 'y',
+    xLabel: document.getElementById('cfgXLabel').value || 'Variable X',
+    yLabel: document.getElementById('cfgYLabel').value || 'Variable Y',
+    xMin:   parseFloat(document.getElementById('cfgXMin').value) || 0,
+    xMax:   parseFloat(document.getElementById('cfgXMax').value) || 100,
+    yMin:   parseFloat(document.getElementById('cfgYMin').value) || 0,
+    yMax:   parseFloat(document.getElementById('cfgYMax').value) || 100,
+    fileName: document.getElementById('cfgFileName').value || 'datos_dibujados',
+    fileType: fileType,
+  };
+  document.getElementById('configScreen').style.display = 'none';
+  const ds = document.getElementById('drawScreen');
+  ds.classList.add('active');
+  ds.style.animation = 'fadeIn 0.4s ease';
+  initCanvas();
+  renderGroupButtons();
+  renderSizeButtons();
+  renderEraserButtons();
+  updateExportBtn();
+  drawCanvas();
+}
+
+function goBack() {
+  document.getElementById('drawScreen').classList.remove('active');
+  document.getElementById('configScreen').style.display = 'flex';
+}
+
+function togglePreview() {
+  document.getElementById('previewPanel').classList.toggle('collapsed');
+}
+
+// ─── MODE ───
+function setMode(m) {
+  mode = m;
+  const drawBtn = document.getElementById('modeDrawBtn');
+  const eraseBtn = document.getElementById('modeEraseBtn');
+  const groupSec = document.getElementById('groupSection');
+  const eraserSec = document.getElementById('eraserSection');
+  const sizeLabel = document.getElementById('sizeLabel');
+  const canvas = document.getElementById('drawCanvas');
+
+  if (mode === 'draw') {
+    drawBtn.className = 'mode-btn active-draw';
+    eraseBtn.className = 'mode-btn';
+    groupSec.style.display = 'flex';
+    eraserSec.style.display = 'none';
+    sizeLabel.textContent = 'Pincel:';
+    canvas.style.cursor = 'crosshair';
+    renderSizeButtons();
+  } else {
+    drawBtn.className = 'mode-btn';
+    eraseBtn.className = 'mode-btn active-erase';
+    groupSec.style.display = 'none';
+    eraserSec.style.display = 'flex';
+    sizeLabel.style.display = 'none';
+    document.getElementById('sizeButtons').style.display = 'none';
+    canvas.style.cursor = 'pointer';
+  }
+  drawCanvas();
+}
+
+// ─── CANVAS ───
+function initCanvas() {
+  const wrapper = document.querySelector('.canvas-wrapper');
+  const availW = wrapper.clientWidth;
+  const availH = wrapper.clientHeight;
+  const ratio = 0.72;
+  // Fit canvas to available space maintaining aspect ratio
+  let w = availW;
+  let h = Math.round(w * ratio);
+  if (h > availH) { h = availH; w = Math.round(h / ratio); }
+  canvasW = w; canvasH = h;
+  const c = document.getElementById('drawCanvas');
+  c.width = canvasW; c.height = canvasH;
+  c.style.width = canvasW + 'px'; c.style.height = canvasH + 'px';
+}
+
+function pW() { return canvasW - PADDING.left - PADDING.right; }
+function pH() { return canvasH - PADDING.top - PADDING.bottom; }
+
+function px2data(px, py) {
+  return {
+    x: +(config.xMin + ((px - PADDING.left) / pW()) * (config.xMax - config.xMin)).toFixed(4),
+    y: +(config.yMax - ((py - PADDING.top) / pH()) * (config.yMax - config.yMin)).toFixed(4),
+  };
+}
+function data2px(dx, dy) {
+  return {
+    px: PADDING.left + ((dx - config.xMin) / (config.xMax - config.xMin)) * pW(),
+    py: PADDING.top + ((config.yMax - dy) / (config.yMax - config.yMin)) * pH(),
+  };
+}
+
+function drawCanvas() {
+  const c = document.getElementById('drawCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, canvasW, canvasH);
+  ctx.fillStyle = '#0A0D13'; ctx.fillRect(0, 0, canvasW, canvasH);
+  ctx.fillStyle = '#12161F'; ctx.fillRect(PADDING.left, PADDING.top, pW(), pH());
+
+  // Grid
+  ctx.strokeStyle = '#1E2636'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 6; i++) { const x = PADDING.left + (i/6)*pW(); ctx.beginPath(); ctx.moveTo(x,PADDING.top); ctx.lineTo(x,PADDING.top+pH()); ctx.stroke(); }
+  for (let i = 0; i <= 5; i++) { const y = PADDING.top + (i/5)*pH(); ctx.beginPath(); ctx.moveTo(PADDING.left,y); ctx.lineTo(PADDING.left+pW(),y); ctx.stroke(); }
+
+  // Ticks
+  ctx.fillStyle = '#5A6578'; ctx.font = "11px 'IBM Plex Mono', monospace"; ctx.textAlign = 'center';
+  for (let i = 0; i <= 6; i++) { const v = config.xMin + (i/6)*(config.xMax-config.xMin); ctx.fillText(v%1===0?v:v.toFixed(1), PADDING.left+(i/6)*pW(), canvasH-PADDING.bottom+20); }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) { const v = config.yMax - (i/5)*(config.yMax-config.yMin); ctx.fillText(v%1===0?v:v.toFixed(1), PADDING.left-10, PADDING.top+(i/5)*pH()+4); }
+
+  // Titles
+  ctx.fillStyle = '#A0AABB'; ctx.font = "bold 13px 'IBM Plex Mono', monospace"; ctx.textAlign = 'center';
+  ctx.fillText(config.xLabel, PADDING.left+pW()/2, canvasH-8);
+  ctx.save(); ctx.translate(16, PADDING.top+pH()/2); ctx.rotate(-Math.PI/2); ctx.fillText(config.yLabel,0,0); ctx.restore();
+
+  // Points
+  points.forEach(p => {
+    const { px, py } = data2px(p.dx, p.dy);
+    ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = COLORS[p.ci]+'BB'; ctx.fill();
+    ctx.strokeStyle = COLORS[p.ci]; ctx.lineWidth = 1.2; ctx.stroke();
+  });
+
+  // Border
+  ctx.strokeStyle = '#2A3348'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(PADDING.left, PADDING.top, pW(), pH());
+
+  // Eraser cursor preview (drawn as circle indicator)
+  if (mode === 'erase' && lastMousePos) {
+    ctx.beginPath();
+    ctx.arc(lastMousePos.px, lastMousePos.py, eraserRadius, 0, Math.PI*2);
+    ctx.strokeStyle = '#EF444488';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ─── INTERACTION ───
+let lastMousePos = null;
+
+function getCanvasPos(e) {
+  const c = document.getElementById('drawCanvas');
+  const r = c.getBoundingClientRect();
+  const cX = e.touches ? e.touches[0].clientX : e.clientX;
+  const cY = e.touches ? e.touches[0].clientY : e.clientY;
+  return { px: (cX-r.left)*(canvasW/r.width), py: (cY-r.top)*(canvasH/r.height) };
+}
+
+function handleDown(e) {
+  e.preventDefault(); isDrawing = true;
+  const pos = getCanvasPos(e);
+  lastMousePos = pos;
+  if (mode === 'draw') addPointAt(pos.px, pos.py);
+  else eraseAt(pos.px, pos.py);
+}
+function handleMove(e) {
+  const pos = getCanvasPos(e);
+  lastMousePos = pos;
+  if (mode === 'erase') { drawCanvas(); } // redraw cursor
+  if (!isDrawing) return;
+  e.preventDefault();
+  if (mode === 'draw') addPointAt(pos.px, pos.py);
+  else eraseAt(pos.px, pos.py);
+}
+function handleUp() { isDrawing = false; }
+function handleLeave() { isDrawing = false; lastMousePos = null; if (mode==='erase') drawCanvas(); }
+
+function addPointAt(px, py) {
+  if (px < PADDING.left || px > canvasW-PADDING.right || py < PADDING.top || py > canvasH-PADDING.bottom) return;
+  const { x, y } = px2data(px, py);
+  const rX = config.xMax-config.xMin, rY = config.yMax-config.yMin;
+  for (let i = 0; i < brushSize; i++) {
+    points.push({
+      dx: +(x + (Math.random()-0.5)*brushSize*rX*0.008).toFixed(4),
+      dy: +(y + (Math.random()-0.5)*brushSize*rY*0.008).toFixed(4),
+      label: currentLabel, ci: currentColorIdx,
+    });
+  }
+  drawCanvas(); updateUI();
+}
+
+function eraseAt(px, py) {
+  const before = points.length;
+  points = points.filter(p => {
+    const dp = data2px(p.dx, p.dy);
+    const dist = Math.sqrt((dp.px - px)**2 + (dp.py - py)**2);
+    return dist > eraserRadius;
+  });
+  if (points.length !== before) { drawCanvas(); updateUI(); }
+}
+
+const canvas = document.getElementById('drawCanvas');
+canvas.addEventListener('pointerdown', handleDown);
+canvas.addEventListener('pointermove', handleMove);
+canvas.addEventListener('pointerup', handleUp);
+canvas.addEventListener('pointerleave', handleLeave);
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('drawScreen').classList.contains('active')) {
+    initCanvas(); drawCanvas();
+  }
+});
+
+// ─── UI ───
+function renderGroupButtons() {
+  const div = document.getElementById('groupButtons'); div.innerHTML = '';
+  labels.forEach((l, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'group-btn'; btn.textContent = l;
+    const c = COLORS[i % COLORS.length];
+    if (currentLabel === l) {
+      btn.style.borderColor = c; btn.style.background = c+'18';
+      btn.style.color = c; btn.style.fontWeight = '700';
+    } else { btn.style.color = c+'AA'; }
+    btn.onclick = () => { currentLabel = l; currentColorIdx = i % COLORS.length; renderGroupButtons(); };
+    div.appendChild(btn);
+  });
+}
+
+function renderSizeButtons() {
+  const div = document.getElementById('sizeButtons');
+  div.innerHTML = ''; div.style.display = 'flex'; div.style.gap = '4px';
+  document.getElementById('sizeLabel').style.display = '';
+  [1,3,5,10].forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'tool-size-btn' + (brushSize===s ? ' active-gold' : '');
+    btn.textContent = s;
+    btn.onclick = () => { brushSize = s; renderSizeButtons(); };
+    div.appendChild(btn);
+  });
+}
+
+function renderEraserButtons() {
+  const div = document.getElementById('eraserButtons');
+  div.innerHTML = ''; div.style.display = 'flex'; div.style.gap = '4px';
+  [10,20,40,60].forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'tool-size-btn' + (eraserRadius===r ? ' active-red' : '');
+    btn.textContent = r;
+    btn.onclick = () => { eraserRadius = r; renderEraserButtons(); };
+    div.appendChild(btn);
+  });
+}
+
+function addLabel() {
+  const input = document.getElementById('newLabelInput');
+  const v = input.value.trim();
+  if (v && !labels.includes(v)) {
+    labels.push(v); currentLabel = v;
+    currentColorIdx = (labels.length-1) % COLORS.length;
+    input.value = ''; renderGroupButtons();
+  }
+}
+
+function clearAll() {
+  if (points.length > 0 && !confirm('¿Limpiar todos los puntos?')) return;
+  points = []; drawCanvas(); updateUI();
+}
+
+function updateUI() {
+  document.getElementById('pointCount').textContent = points.length + ' pts';
+  updateExportBtn(); renderLegend(); renderPreview();
+}
+
+function updateExportBtn() {
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = points.length === 0;
+  btn.textContent = '📥 Exportar .' + config.fileType;
+}
+
+function renderLegend() {
+  const div = document.getElementById('legend');
+  const used = labels.filter(l => points.some(p => p.label === l));
+  div.innerHTML = used.map(l => {
+    const idx = labels.indexOf(l); const c = COLORS[idx % COLORS.length];
+    return `<div class="legend-item"><div class="legend-dot" style="background:${c}"></div>${l} (${points.filter(p=>p.label===l).length})</div>`;
+  }).join('');
+}
+
+function renderPreview() {
+  const panel = document.getElementById('previewPanel');
+  if (!points.length) { panel.style.display='none'; return; }
+  panel.style.display='block';
+  document.getElementById('previewTitle').textContent = `Vista previa (${points.length} observaciones)`;
+  document.getElementById('previewHead').innerHTML = `<tr><th>#</th><th style="text-align:right">${config.xName}</th><th style="text-align:right">${config.yName}</th><th>label</th></tr>`;
+  const last = points.slice(-8); const s = points.length - last.length + 1;
+  document.getElementById('previewBody').innerHTML = last.map((p,i) =>
+    `<tr><td>${s+i}</td><td style="text-align:right">${p.dx}</td><td style="text-align:right">${p.dy}</td><td style="color:${COLORS[p.ci]}">${p.label}</td></tr>`
+  ).join('');
+}
+
+// ─── EXPORT ───
+function exportData() {
+  if (!points.length) return;
+  const rows = points.map(p => ({ [config.xName]: p.dx, [config.yName]: p.dy, label: p.label }));
+  if (config.fileType === 'csv') {
+    const h = [config.xName, config.yName, 'label'];
+    const csv = [h.join(','), ...rows.map(r => h.map(k => typeof r[k]==='string' && r[k].includes(',') ? `"${r[k]}"` : r[k]).join(','))].join('\n');
+    dl(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}), config.fileName+'.csv');
+  } else {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+    XLSX.writeFile(wb, config.fileName+'.xlsx');
+  }
+}
+function dl(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
